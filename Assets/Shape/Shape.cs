@@ -46,15 +46,91 @@ public class Shape : MonoBehaviour {
     {
         GameObject shape = new GameObject();
         shape.AddComponent<Shape>().SetMesh(outside.ToArray());
-        shape.GetComponent<Shape>().GenerateNormals();
+    }
+
+    void SetCollider(Poly2Mesh.Polygon polygon)
+    {
+
+        Vector2[] outsidePath = new Vector2[polygon.outside.Count];
+        for (int i = 0; i < polygon.outside.Count; i++)
+            outsidePath[i] = new Vector2(polygon.outside[i].x, polygon.outside[i].y);
+
+        collider.SetPath(0, outsidePath);
+
+        for (int i = 0; i < polygon.holes.Count; i++)
+        {
+
+            List<Vector3> hole = polygon.holes[i];
+            Vector2[] holePath = new Vector2[hole.Count];
+            for (int j = 0; j < hole.Count; j++)
+                holePath[j] = new Vector2(hole[j].x, hole[j].y);
+
+            collider.SetPath(1 + i, holePath);
+
+        }
+
+    }
+    void SetMesh(Vector3[] vertices)
+    {
+
+        int nrOfPoints = vertices.Length;
+        Vector2[] path = new Vector2[nrOfPoints];
+        for (int i = 0; i < nrOfPoints; i++)
+            path[i] = new Vector2(vertices[i].x, vertices[i].y);
+
+        collider.SetPath(0, path);
+
+        Triangulator triangulator = new Triangulator(collider.points);
+        int[] triangles = triangulator.Triangulate();
+
+        meshFilter.mesh.vertices = vertices;
+        meshFilter.mesh.triangles = triangles;
+
+        line_list = new Line_List(path);
+        GenerateNormals();
+        line_list.Draw();
+
     }
 
     void GenerateNormals()
     {
 
-        Vector2[] path = GetShapePath(this);
-        
+        List<Line> lines = line_list.lines;
 
+        if(lines.Count != 0)
+        {
+
+            float dx = lines[0].point[1].x - lines[0].point[0].x;
+            float dy = lines[0].point[1].y - lines[0].point[0].y;
+            Vector2 normal = new Vector2(-dy, dx).normalized;
+            Vector2 mid_point = (lines[0].point[0] + (lines[0].point[1] - lines[0].point[0]) * 0.5f);
+            Vector2 test_point = mid_point + normal * 0.001f;
+
+            if (collider.OverlapPoint(test_point))
+
+                for (int i = 0; i < lines.Count; i++)
+                {
+
+                    dx = lines[i].point[1].x - lines[i].point[0].x;
+                    dy = lines[i].point[1].y - lines[i].point[0].y;
+                    normal = new Vector2(dy, -dx).normalized;
+                    lines[i].normal = normal;
+                }
+
+            else
+            {
+
+                for (int i = 0; i < lines.Count; i++)
+                {
+
+                    dx = lines[i].point[1].x - lines[i].point[0].x;
+                    dy = lines[i].point[1].y - lines[i].point[0].y;
+                    normal = new Vector2(-dy, dx).normalized;
+                    lines[i].normal = normal;
+                }
+
+            }
+        }
     }
 
     void AddTrigger()
@@ -599,49 +675,6 @@ public class Shape : MonoBehaviour {
         Destroy(this.gameObject);
         shapeList.Remove(shape.gameObject);
         Destroy(shape.gameObject);
-
-    }
-
-    void SetCollider(Poly2Mesh.Polygon polygon)
-    {
-
-        Vector2[] outsidePath = new Vector2[polygon.outside.Count];
-        for (int i = 0; i < polygon.outside.Count; i++)
-            outsidePath[i] = new Vector2(polygon.outside[i].x, polygon.outside[i].y);
-
-        collider.SetPath(0, outsidePath);
-
-        for (int i = 0; i < polygon.holes.Count; i++)
-        {
-
-            List<Vector3> hole = polygon.holes[i];
-            Vector2[] holePath = new Vector2[hole.Count];
-            for (int j = 0; j < hole.Count; j++)
-                holePath[j] = new Vector2(hole[j].x, hole[j].y);
-
-            collider.SetPath(1 + i, holePath);
-
-        }
-
-    }
-    void SetMesh(Vector3[] vertices)
-    {
-
-        int nrOfPoints = vertices.Length;
-        Vector2[] path = new Vector2[nrOfPoints];
-        for (int i = 0; i < nrOfPoints; i++)
-            path[i] = new Vector2(vertices[i].x, vertices[i].y);
-
-        collider.SetPath(0, path);
-
-        Triangulator triangulator = new Triangulator(collider.points);
-        int[] triangles = triangulator.Triangulate();
-
-        meshFilter.mesh.vertices = vertices;
-        meshFilter.mesh.triangles = triangles;
-
-        if(path.Length != 0)
-            line_list = new Line_List(path);
 
     }
 

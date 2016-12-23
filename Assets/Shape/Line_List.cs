@@ -14,6 +14,7 @@ public class Line
 
     //The position of the vertex.
     public Vector2[] point = new Vector2[2];
+    public Vector2 normal;
 
     public void SetIntersects(bool value) { intersects = value; }
 
@@ -81,7 +82,7 @@ public class Line_List {
         }
 
     }
- 
+
     public void SetIntersections(Line_List other)
     {
 
@@ -127,6 +128,9 @@ public class Line_List {
 
         for (int i = 0; i < lines.Count; i++)
         {
+
+            Vector2 mid_point = (lines[i].point[0] + (lines[i].point[1] - lines[i].point[0]) * 0.5f);
+            Debug.DrawRay(mid_point, lines[i].normal, Color.black, 10);
 
             if (lines[i].intersects)
             {
