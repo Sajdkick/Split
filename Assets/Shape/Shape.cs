@@ -11,6 +11,8 @@ public class Shape : MonoBehaviour {
     static int id = 0;
     static List<GameObject> shapeList = new List<GameObject>();
 
+    Line_List line_list;
+
     bool merging;
 
     // Use this for initialization
@@ -42,9 +44,17 @@ public class Shape : MonoBehaviour {
 
     public static void CreateShape(List<Vector3> outside, List<List<Vector3>> holes)
     {
-
         GameObject shape = new GameObject();
         shape.AddComponent<Shape>().SetMesh(outside.ToArray());
+        shape.GetComponent<Shape>().GenerateNormals();
+    }
+
+    void GenerateNormals()
+    {
+
+        Vector2[] path = GetShapePath(this);
+        
+
     }
 
     void AddTrigger()
@@ -300,50 +310,6 @@ public class Shape : MonoBehaviour {
         return true;
 
     }
-    class Line
-    {
-
-        public Line[] link = new Line[2];
-
-        //The position of the vertex.
-        public Vector2[] point = new Vector2[2];
-
-        public void SetIntersects(bool value) { intersects = value; }
-
-        public bool intersects;
-        public List<Intersection> intersections = new List<Intersection>();
-
-        public Intersection GetClosestIntersection(int direction)
-        {
-
-            int index = 0;
-            float min_distance = Vector2.Distance(point[1 - direction], intersections[0].intersection);
-            for(int i = 1; i < intersections.Count; i++)
-            {
-
-                float new_distance = Vector2.Distance(point[1 - direction], intersections[i].intersection);
-                if (new_distance < min_distance)
-                {
-
-                    min_distance = new_distance;
-                    index = i;
-
-                }
-
-            }
-
-            return intersections[index];
-
-        }
-
-    }
-    struct Intersection
-    {
-
-        public int intersection_index;
-        public Vector2 intersection;
-
-    }
 
     public void Merge2(Shape shape)
     {
@@ -352,9 +318,9 @@ public class Shape : MonoBehaviour {
         Vector2[] path1 = GetShapePath(this);
         Vector2[] path2 = GetShapePath(shape);
 
-        //We find the intersections between the two paths.
         List<Line>[] line_lists = new List<Line>[2];
-        GetIntersectionLineLists(path1, path2, out line_lists[0], out line_lists[1]);
+        line_lists[0] = line_list.lines;
+        line_lists[1] = shape.line_list.lines;
 
         //DrawLineList(line_lists[0]);
         //DrawLineList(line_lists[1]);
@@ -443,133 +409,6 @@ public class Shape : MonoBehaviour {
 
         }
         return path;
-
-    }
-    private void GetIntersectionLineLists(Vector2[] path1, Vector2[] path2, out List<Line> line_list1, out List<Line> line_list2)
-    {
-
-        //We find the intersections between the two paths.
-        line_list1 = new List<Line>();
-
-        //We create and fill our line2.
-        line_list2 = new List<Line>();
-        for (int j = 0; j < path2.Length; j++)
-        {
-
-            //The points that make up the line of path2.
-            Vector2 point3 = path2[j];
-            Vector2 point4 = path2[(j + 1) % path2.Length];
-
-            Line line2 = new Line();
-            line2.point[0] = point3;
-            line2.point[1] = point4;
-            line2.intersects = false;
-            line_list2.Add(line2);
-
-        }
-
-        for (int i = 0; i < path1.Length; i++)
-        {
-
-            //The points that make up the line of path1.
-            Vector2 point1 = path1[i];
-            Vector2 point2 = path1[(i + 1) % path1.Length];
-
-            Line line1 = new Line();
-            line1.point[0] = point1;
-            line1.point[1] = point2;
-            line1.intersects = false;
-
-            float distance = Vector2.Distance(point1, point2);
-
-            //We loop through all lines of path2.
-            for (int j = 0; j < path2.Length; j++)
-            {
-
-                Vector2 intersection_point;
-                //We check for an intersection.
-                if (MathF.LineIntersection(point1, point2, line_list2[j].point[0], line_list2[j].point[1], out intersection_point))
-                {
-
-                    Intersection intersection1;
-                    intersection1.intersection_index = j;
-                    intersection1.intersection = intersection_point;
-
-                    line1.intersects = true;
-                    line1.intersections.Add(intersection1);
-
-                    Intersection intersection2;
-                    intersection2.intersection_index = i;
-                    intersection2.intersection = intersection_point;
-
-                    line_list2[j].SetIntersects(true);
-                    line_list2[j].intersections.Add(intersection2);
-                    
-                }
-
-            }
-
-            line_list1.Add(line1);
-
-        }
-
-        LinkLineList(line_list1);
-        LinkLineList(line_list2);
-
-    }
-    private void LinkLineList(List<Line> lines)
-    {
-
-        if(lines.Count != 0)
-        {
-
-            {
-                lines[0].link[1] = lines[1];
-                lines[0].link[0] = lines[lines.Count - 1];
-            }
-
-            for (int i = 1; i < lines.Count; i++)
-            {
-                lines[i].link[1] = lines[(i + 1) % lines.Count];
-                lines[i].link[0] = lines[i - 1];
-            }
-
-        }
-
-    }
-    private void DrawLineList(List<Line> line_list)
-    {
-
-        for(int i = 0; i < line_list.Count; i++)
-        {
-
-            if (line_list[i].intersects)
-            {
-
-                line_list[i].intersections.Sort(delegate (Intersection a, Intersection b)
-                {
-                    return Vector2.Distance(line_list[i].point[0], a.intersection)
-                    .CompareTo(
-                      Vector2.Distance(line_list[i].point[0], b.intersection));
-                });
-
-                Debug.DrawLine(line_list[i].point[0], line_list[i].intersections[0].intersection, Color.red, 10);
-                Vector2 last_point = line_list[i].intersections[0].intersection;
-                for (int j = 0; j < line_list[i].intersections.Count; j++)
-                {
-
-                    Debug.DrawLine(last_point, line_list[i].intersections[j].intersection, new Color(0, Random.Range(0f, 1f), Random.Range(0f, 1f)), 10);
-                    last_point = line_list[i].intersections[j].intersection;
-
-                }
-
-                Debug.DrawLine(last_point, line_list[i].point[1], Color.red, 10);
-
-            }
-                
-            else Debug.DrawLine(line_list[i].point[0], line_list[i].point[1], Color.green, 10);
-
-        }
 
     }
     private bool TraverseLineList(List<Line> line_list, int start_index, Vector2 target_point, int direction, out int exit_index, out List<Vector2> traversed_points)
@@ -801,6 +640,9 @@ public class Shape : MonoBehaviour {
         meshFilter.mesh.vertices = vertices;
         meshFilter.mesh.triangles = triangles;
 
+        if(path.Length != 0)
+            line_list = new Line_List(path);
+
     }
 
     void PuzzleMaster(List<List<Vector3>> pieces, List<Vector3> splits, List<List<Vector3>> voids)
@@ -941,15 +783,15 @@ public class Shape : MonoBehaviour {
     {
 
         Vector2[] path = collider.GetPath(0);
-        string[] lines = new string[path.Length];
+        string[] string_lines = new string[path.Length];
         for (int i = 0; i < path.Length; i++)
         {
 
-            lines[i] = transform.localToWorldMatrix.MultiplyPoint3x4(path[i]).ToString();
+            string_lines[i] = transform.localToWorldMatrix.MultiplyPoint3x4(path[i]).ToString();
 
         }
 
-        System.IO.File.WriteAllLines("/SavedShapes/Shape" + id + ".txt", lines);
+        System.IO.File.WriteAllLines("/SavedShapes/Shape" + id + ".txt", string_lines);
 
     }
 
@@ -957,18 +799,18 @@ public class Shape : MonoBehaviour {
     static void SaveToFile(Vector3[] vertices, string name)
     {
 
-        string[] lines = new string[vertices.Length * 2];
+        string[] string_lines = new string[vertices.Length * 2];
         for (int i = 0; i < vertices.Length; i++)
         {
 
             print(vertices[i].x.ToString() + ":" + vertices[i].y.ToString());
 
-            lines[i * 2] = vertices[i].x.ToString();
-            lines[i * 2 + 1] = vertices[i].y.ToString();
+            string_lines[i * 2] = vertices[i].x.ToString();
+            string_lines[i * 2 + 1] = vertices[i].y.ToString();
 
         }
 
-        System.IO.File.WriteAllLines(name + ".txt", lines);
+        System.IO.File.WriteAllLines(name + ".txt", string_lines);
 
     }
 
@@ -977,17 +819,17 @@ public class Shape : MonoBehaviour {
         System.Globalization.NumberFormatInfo format = new System.Globalization.NumberFormatInfo();
         format.NegativeSign = "-";
         format.NumberDecimalSeparator = ".";
-        string[] lines = System.IO.File.ReadAllLines(path);
+        string[] string_lines = System.IO.File.ReadAllLines(path);
 
 
 
         List<Vector3> vertices = new List<Vector3>();
-        for(int i = 0; i < lines.Length / 2; i++)
+        for(int i = 0; i < string_lines.Length / 2; i++)
         {
 
             //print(float.Parse(lines[i * 2]) + ":" + float.Parse(lines[i * 2 + 1]));
 
-            vertices.Add(new Vector3(float.Parse(lines[i * 2]), float.Parse(lines[i * 2 + 1]), 0));
+            vertices.Add(new Vector3(float.Parse(string_lines[i * 2]), float.Parse(string_lines[i * 2 + 1]), 0));
 
         }
 
@@ -1025,6 +867,7 @@ public class Shape : MonoBehaviour {
             print("Merging");
             merging = true;
             stay.GetComponent<Shape>().merging = true;
+            line_list.SetIntersections(stay.GetComponent<Shape>().line_list);
             Merge2(stay.GetComponent<Shape>());
 
         }
