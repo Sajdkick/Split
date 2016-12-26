@@ -86,10 +86,6 @@ public class Shape : MonoBehaviour {
         meshFilter.mesh.vertices = vertices;
         meshFilter.mesh.triangles = triangles;
 
-        line_list = new Line_List(path);
-        GenerateNormals();
-        line_list.Draw();
-
     }
 
     void GenerateNormals()
@@ -433,6 +429,8 @@ public class Shape : MonoBehaviour {
             if (!finished)
             {
 
+                Vector2 line_normal = line_lists[target_list][exit_index].normal;
+
                 //We get the intersection and add it to the vertex list.
                 Intersection intersection = line_lists[target_list][exit_index].GetClosestIntersection(direction);
                 vertices.Add(intersection.intersection);
@@ -444,6 +442,13 @@ public class Shape : MonoBehaviour {
                 point_index = intersection.intersection_index;
 
                 //We dont calculate if we want to change direction at the moment. TODO
+                if (Vector2.Dot(line_normal, intersection.intersection - line_lists[target_list][point_index].point[0]) < 0)
+                {
+
+                    direction = 1;
+
+                }
+                else direction = 0;
 
             }
             else break;
@@ -490,27 +495,30 @@ public class Shape : MonoBehaviour {
     private bool TraverseLineList(List<Line> line_list, int start_index, Vector2 target_point, int direction, out int exit_index, out List<Vector2> traversed_points)
     {
 
-        traversed_points = new List<Vector2>();
-        traversed_points.Add(line_list[start_index].point[1 - direction]);
+        //We compensate the start_index if we are movng backwards.
+        int ic = (-1 + 2 * direction);
+        int point_index = 1 - direction;
 
-        start_index -= 1 + direction;
+        start_index -= 1 * (1 - direction);
         if (start_index < 0)
             start_index = line_list.Count - 1;
+
         bool intersection = line_list[start_index].intersects;
+
+        traversed_points = new List<Vector2>();
+        traversed_points.Add(line_list[start_index].point[1 - direction]);
 
         if (!intersection)
         {
 
             int i;
-            int ic = (-1 + 2 * direction);
             for (i = start_index + ic; i != start_index; i += ic)
             {
 
-                int list_index = i % line_list.Count;
-                int point_index = 1 - direction;
-
                 if (i < 0)
                     i = line_list.Count - 1;
+
+                int list_index = i % line_list.Count;
 
                 exit_index = list_index;
                 if (line_list[list_index].intersects)
@@ -900,6 +908,12 @@ public class Shape : MonoBehaviour {
             print("Merging");
             merging = true;
             stay.GetComponent<Shape>().merging = true;
+
+            line_list = new Line_List(GetShapePath(this));
+            GenerateNormals();
+            stay.GetComponent<Shape>().line_list = new Line_List(GetShapePath(stay.GetComponent<Shape>()));
+            stay.GetComponent<Shape>().GenerateNormals();
+
             line_list.SetIntersections(stay.GetComponent<Shape>().line_list);
             Merge2(stay.GetComponent<Shape>());
 
