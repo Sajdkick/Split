@@ -11,8 +11,6 @@ public class Shape : MonoBehaviour {
     static int id = 0;
     static List<GameObject> shapeList = new List<GameObject>();
 
-    Line_List line_list;
-
     bool merging;
 
     // Use this for initialization
@@ -86,47 +84,6 @@ public class Shape : MonoBehaviour {
         meshFilter.mesh.vertices = vertices;
         meshFilter.mesh.triangles = triangles;
 
-    }
-
-    void GenerateNormals()
-    {
-
-        List<Line> lines = line_list.lines;
-
-        if(lines.Count != 0)
-        {
-
-            float dx = lines[0].point[1].x - lines[0].point[0].x;
-            float dy = lines[0].point[1].y - lines[0].point[0].y;
-            Vector2 normal = new Vector2(-dy, dx).normalized;
-            Vector2 mid_point = (lines[0].point[0] + (lines[0].point[1] - lines[0].point[0]) * 0.5f);
-            Vector2 test_point = mid_point + normal * 0.001f;
-
-            if (collider.OverlapPoint(test_point))
-
-                for (int i = 0; i < lines.Count; i++)
-                {
-
-                    dx = lines[i].point[1].x - lines[i].point[0].x;
-                    dy = lines[i].point[1].y - lines[i].point[0].y;
-                    normal = new Vector2(dy, -dx).normalized;
-                    lines[i].normal = normal;
-                }
-
-            else
-            {
-
-                for (int i = 0; i < lines.Count; i++)
-                {
-
-                    dx = lines[i].point[1].x - lines[i].point[0].x;
-                    dy = lines[i].point[1].y - lines[i].point[0].y;
-                    normal = new Vector2(-dy, dx).normalized;
-                    lines[i].normal = normal;
-                }
-
-            }
-        }
     }
 
     void AddTrigger()
@@ -390,16 +347,16 @@ public class Shape : MonoBehaviour {
         Vector2[] path1 = GetShapePath(this);
         Vector2[] path2 = GetShapePath(shape);
 
-        List<Line>[] line_lists = new List<Line>[2];
-        line_lists[0] = line_list.lines;
-        line_lists[1] = shape.line_list.lines;
+        Intersection_List[] intersection_lists = new Intersection_List[2];
+
+        Intersection_List.Create_Lists(path1, collider, path2, shape.collider, out intersection_lists[0], out intersection_lists[1]);
 
         //DrawLineList(line_lists[0]);
         //DrawLineList(line_lists[1]);
 
         //We decide which point to start on, we make sure it's not within the bounds of a shape.
         int point_index = 0;
-        if (shape.collider.OverlapPoint(line_lists[0][0].point[0]))
+        if (shape.collider.OverlapPoint(intersection_lists[0].points[0].position))
         {
             point_index = 1;
         }
@@ -407,48 +364,56 @@ public class Shape : MonoBehaviour {
         int start_index = point_index;
         int direction = 1;
         int target_list = 0;
-        Vector2 start_point = line_lists[target_list][start_index].point[0];
+        Vector2 start_point = intersection_lists[target_list].points[start_index].position;
         List<Vector2> vertices = new List<Vector2>();
         do
         {
             List<Vector2> traversed_points;
             int exit_index;
-            bool finished = TraverseLineList(line_lists[target_list], point_index, start_point, direction, out exit_index, out traversed_points);
 
-            Vector2 last_point = traversed_points[0];
-            for(int i = 0; i < traversed_points.Count; i++)
+            bool finished = TraverseIntersectionList(intersection_lists[target_list], point_index, start_point, direction, out exit_index, out traversed_points);
+
+            if(traversed_points.Count != 0)
             {
 
+                Vector2 last_point = traversed_points[0];
                 Color color = new Color(Random.Range(0f, 1f), Random.Range(0f, 1f), Random.Range(0f, 1f), Random.Range(0f, 1f));
-                Debug.DrawLine(last_point, traversed_points[i], color, 10);
-                vertices.Add(traversed_points[i]);
-                last_point = traversed_points[i];
+                for (int i = 0; i < traversed_points.Count; i++)
+                {
+
+                    //Debug.DrawLine(last_point, traversed_points[i], color, 10);
+                    vertices.Add(traversed_points[i]);
+                    last_point = traversed_points[i];
+
+                }
 
             }
 
             if (!finished)
             {
 
-                Vector2 line_normal = line_lists[target_list][exit_index].normal;
+                Vector2 line_normal = intersection_lists[target_list].points[exit_index].normals[direction];
 
                 //We get the intersection and add it to the vertex list.
-                Intersection intersection = line_lists[target_list][exit_index].GetClosestIntersection(direction);
+                Intersection intersection = intersection_lists[target_list].points[exit_index].GetClosestIntersection(direction);
                 vertices.Add(intersection.intersection);
 
                 //This switches the target line.
                 target_list = 1 - target_list;
 
-                //We switch to the correct index on the new line.
-                point_index = intersection.intersection_index;
-
                 //We dont calculate if we want to change direction at the moment. TODO
-                if (Vector2.Dot(line_normal, intersection.intersection - line_lists[target_list][point_index].point[0]) < 0)
+                if (Vector2.Dot(line_normal, intersection.intersection - intersection.points[direction].position) < 0)
                 {
 
                     direction = 1;
 
                 }
                 else direction = 0;
+
+                point_index = intersection.points[direction].index;
+
+                if (Vector2.Distance(intersection_lists[target_list].points[point_index].position, start_point) < 0.001f)
+                    break;
 
             }
             else break;
@@ -492,65 +457,57 @@ public class Shape : MonoBehaviour {
         return path;
 
     }
-    private bool TraverseLineList(List<Line> line_list, int start_index, Vector2 target_point, int direction, out int exit_index, out List<Vector2> traversed_points)
+    private bool TraverseIntersectionList(Intersection_List list, int start_index, Vector2 target_point, int direction, out int exit_index, out List<Vector2> traversed_points)
     {
 
-        //We compensate the start_index if we are movng backwards.
-        int ic = (-1 + 2 * direction);
-        int point_index = 1 - direction;
-
-        start_index -= 1 * (1 - direction);
-        if (start_index < 0)
-            start_index = line_list.Count - 1;
-
-        bool intersection = line_list[start_index].intersects;
-
         traversed_points = new List<Vector2>();
-        traversed_points.Add(line_list[start_index].point[1 - direction]);
+        traversed_points.Add(list.points[start_index].position);
+        exit_index = start_index;
 
-        if (!intersection)
+        if(list.points[start_index].intersections[direction].Count != 0)
         {
 
-            int i;
-            for (i = start_index + ic; i != start_index; i += ic)
-            {
+            return false;
+
+        }
+
+        int i = start_index;
+        int ic = (-1 + 2 * direction);
+        do{
+
+                i += ic;
 
                 if (i < 0)
-                    i = line_list.Count - 1;
+                    i = list.points.Count - 1;
 
-                int list_index = i % line_list.Count;
+                if (i >= list.points.Count)
+                    i = 0;
 
-                exit_index = list_index;
-                if (line_list[list_index].intersects)
-                {
+                int index = i;
 
-                    return false;
-
-                }
+                exit_index = i;
 
                 //If we've reached our target point we break;
-                if (line_list[list_index].point[point_index].Equals(target_point))
+                if (Vector3.Distance(list.points[i].position, target_point) < 0.0001f)
                 {
 
                     return true;
 
                 }
 
-                Vector2 new_point = line_list[list_index].point[point_index];
+                Vector2 new_point = list.points[i].position;
                 traversed_points.Add(new_point);
+                if (list.points[i].intersections[direction].Count != 0)
+                {
 
-            }
 
-            exit_index = i % line_list.Count;
+                    return false;
 
-        }
-        else
-        {
+                }
 
-            exit_index = start_index;
-            return true;
+            } while (i != start_index);
 
-        }
+        exit_index = i % list.points.Count;
 
         return true;
 
@@ -909,12 +866,6 @@ public class Shape : MonoBehaviour {
             merging = true;
             stay.GetComponent<Shape>().merging = true;
 
-            line_list = new Line_List(GetShapePath(this));
-            GenerateNormals();
-            stay.GetComponent<Shape>().line_list = new Line_List(GetShapePath(stay.GetComponent<Shape>()));
-            stay.GetComponent<Shape>().GenerateNormals();
-
-            line_list.SetIntersections(stay.GetComponent<Shape>().line_list);
             Merge2(stay.GetComponent<Shape>());
 
         }
