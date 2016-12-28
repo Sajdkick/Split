@@ -402,7 +402,7 @@ public class Shape : MonoBehaviour {
                 target_list = 1 - target_list;
 
                 //We dont calculate if we want to change direction at the moment. TODO
-                if (Vector2.Dot(line_normal, intersection.intersection - intersection.points[direction].position) < 0)
+                if (Vector2.Dot(line_normal, intersection.intersection - intersection.points[1].position) < 0)
                 {
 
                     direction = 1;
