@@ -1,23 +1,28 @@
 ﻿using UnityEngine;
 using System.Collections.Generic;
 
+//Stores a single intersection and the poins connected to it.
 public class Intersection
 {
-
     public Point[] points = new Point[2];
     public Vector2 intersection;
 
 }
+//Stores information about the points that makes up an intersection list.
 public class Point
 {
 
-    //The position of the vertex.
+    //The position of the point.
     public Vector2 position;
+    //The right and left normals.
     public Vector2[] normals = new Vector2[2];
+    //The points index in the Intersection List.
     public int index;
 
+    //The intersection of the line segment created with the next and previous points.
     public List<Intersection>[] intersections = new List<Intersection>[2];
     
+    //Get the intersection closest to the point.
     public Intersection GetClosestIntersection(int direction)
     {
 
@@ -43,11 +48,13 @@ public class Point
 
 }
 
+//Stores points, used for intersection.
 public class Intersection_List {
 
     public List<Point> points;
     public PolygonCollider2D collider;
 
+    //Create two intersection lists.
     public static void Create_Lists(Vector2[] path1, PolygonCollider2D collider1, Vector2[] path2, PolygonCollider2D collider2, out Intersection_List list_1, out Intersection_List list_2)
     {
 
@@ -83,6 +90,7 @@ public class Intersection_List {
 
     }
 
+    //Sets the normals for the points in the list.
     public void GenerateNormals()
     {
 
@@ -91,43 +99,42 @@ public class Intersection_List {
 
             float dx = points[1].position.x - points[0].position.x;
             float dy = points[1].position.y - points[0].position.y;
+
+            //We create a point that's been moved along one of the two possible normals, if this point is inside the collider
+            //we use the other one.
             Vector2 normal = new Vector2(-dy, dx).normalized;
             Vector2 mid_point = (points[0].position + (points[1].position - points[0].position) * 0.5f);
             Vector2 test_point = mid_point + normal * 0.001f;
 
-            if (collider.OverlapPoint(test_point))
-
-                for (int i = 0; i < points.Count; i++)
-                {
-                    dx = points[(i + 1) % points.Count].position.x - points[i].position.x;
-                    dy = points[(i + 1) % points.Count].position.y - points[i].position.y;
-                    normal = new Vector2(dy, -dx).normalized;
-                    points[i].normals[1] = normal;
-                    points[(i + 1) % points.Count].normals[0] = normal;
-                }
-
-            else
+            //We check if our test point is inside the collider.
+            bool test = collider.OverlapPoint(test_point);
+            for (int i = 0; i < points.Count; i++)
             {
 
-                for (int i = 0; i < points.Count; i++)
-                {
-                    dx = points[(i + 1) % points.Count].position.x - points[i].position.x;
-                    dy = points[(i + 1) % points.Count].position.y - points[i].position.y;
-                    normal = new Vector2(-dy, dx).normalized;
-                    points[i].normals[1] = normal;
-                    points[(i + 1) % points.Count].normals[0] = normal;
-                }
+                dx = points[(i + 1) % points.Count].position.x - points[i].position.x;
+                dy = points[(i + 1) % points.Count].position.y - points[i].position.y;
+
+                //The normal depends on if the test_point was inside the collider.
+                if (test)
+                    normal = new Vector2(dy, -dx).normalized;
+                else normal = new Vector2(-dy, dx).normalized;
+
+                points[i].normals[1] = normal;
+                points[(i + 1) % points.Count].normals[0] = normal;
+
             }
         }
     }
 
+    //Checks for intersections between two intersection lists.
     public void SetIntersections(Intersection_List other)
     {
 
+        //We loop through all the points of list 1.
         for (int i = 0; i < points.Count; i++)
         {
 
-            //We loop through all points of path2.
+            //We loop through all points of list 2.
             for (int j = 0; j < other.points.Count; j++)
             {
 
@@ -160,11 +167,6 @@ public class Intersection_List {
                     intersection2.points[0].intersections[1].Add(intersection1);
                     intersection2.points[1].intersections[0].Add(intersection1);
 
-                    //points[index_1].intersections[1].Add(intersection1);
-                    //points[index_2].intersections[0].Add(intersection1);
-                    //other.points[index_2].intersections[1].Add(intersection2);
-                    //other.points[index_3].intersections[0].Add(intersection2);
-
                 }
 
             }
@@ -173,56 +175,37 @@ public class Intersection_List {
 
     }
 
-    public void SortIntersections()
-    {
-
-        for(int i = 0; i < points.Count; i++)
-        {
-
-            points[i].intersections[0].Sort(delegate (Intersection b, Intersection a)
-            {
-                return Vector2.Distance(points[i].position, a.intersection)
-                .CompareTo(
-                  Vector2.Distance(points[i].position, b.intersection));
-            });
-
-            points[i].intersections[1].Sort(delegate (Intersection b, Intersection a)
-            {
-                return Vector2.Distance(points[i].position, a.intersection)
-                .CompareTo(
-                  Vector2.Distance(points[i].position, b.intersection));
-            });
-
-        }
-
-    }
-
+    //Draws the intersection list, for debugging purposes.
     public void Draw()
     {
 
+        //Goes through all the points
         for (int i = 0; i < points.Count; i++)
         {
 
+            //Draws the normal.
             Vector2 mid_point = (points[i].position + (points[(i + 1) % points.Count].position - points[i].position) * 0.5f);
             Debug.DrawRay(mid_point, points[i].normals[1], Color.black, 10);
 
+            //If there's an intersection.
             if (points[i].intersections[1].Count != 0)
             {
 
-                Debug.DrawLine(points[i].position, points[i].intersections[1][0].intersection, Color.red, 10);
-                Vector2 last_point = points[i].intersections[1][0].intersection;
-                for (int j = 0; j < points[i].intersections[1].Count; j++)
-                {
+                //We draw this line as red.
+                Debug.DrawLine(points[i].position, points[(i + 1) % points.Count].position, Color.red, 10);
+                //Vector2 last_point = points[i].intersections[1][0].intersection;
+                //for (int j = 0; j < points[i].intersections[1].Count; j++)
+                //{
 
-                    Debug.DrawLine(last_point, points[i].intersections[1][j].intersection, new Color(0, Random.Range(0f, 1f), Random.Range(0f, 1f)), 10);
-                    last_point = points[i].intersections[1][j].intersection;
+                //    Debug.DrawLine(last_point, points[i].intersections[1][j].intersection, new Color(0, Random.Range(0f, 1f), Random.Range(0f, 1f)), 10);
+                //    last_point = points[i].intersections[1][j].intersection;
 
-                }
+                //}
 
-                Debug.DrawLine(last_point, points[(i + 1) % points.Count].position, Color.red, 10);
+                //Debug.DrawLine(last_point, points[(i + 1) % points.Count].position, Color.red, 10);
 
             }
-
+            //If it doesnt intersect we draw it green.
             else Debug.DrawLine(points[i].position, points[(i + 1) % points.Count].position, Color.green, 10);
 
         }

@@ -196,7 +196,7 @@ public class Drawer : MonoBehaviour {
         switch (mode) {
 
             case 0:
-                Shape.CreateShape(points, new List<List<Vector3>>());
+                Shape.CreateShape(points);
                 break;
             case 1:
                 Obstacle.CreateObstacle(points.ToArray());
