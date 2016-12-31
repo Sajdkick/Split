@@ -1,5 +1,6 @@
 ﻿using UnityEngine;
 using System.Collections.Generic;
+using System.Linq;
 
 //Stores a single intersection and the poins connected to it.
 public class Intersection
@@ -62,9 +63,11 @@ public class Intersection_List {
         list_2 = new Intersection_List(path2, collider2);
 
         list_1.SetIntersections(list_2);
+        list_1.SortIntersections();
+        list_2.SortIntersections();
 
-        list_1.Draw();
-        list_2.Draw();
+        //list_1.Draw();
+        //list_2.Draw();
 
     }
 
@@ -102,12 +105,19 @@ public class Intersection_List {
 
             //We create a point that's been moved along one of the two possible normals, if this point is inside the collider
             //we use the other one.
-            Vector2 normal = new Vector2(-dy, dx).normalized;
+            Vector2 normal1 = new Vector2(-dy, dx).normalized;
+            Vector2 normal2 = new Vector2(dy, -dx).normalized;
             Vector2 mid_point = (points[0].position + (points[1].position - points[0].position) * 0.5f);
-            Vector2 test_point = mid_point + normal * 0.001f;
+            Vector2 test_point1 = mid_point + normal1 * 0.00001f;
+            Vector2 test_point2 = mid_point + normal2 * 0.00001f;
 
             //We check if our test point is inside the collider.
-            bool test = collider.OverlapPoint(test_point);
+            bool test1 = collider.OverlapPoint(test_point1);
+            bool test2 = collider.OverlapPoint(test_point2);
+
+            if (test1 == test2)
+                test1 = test2;
+
             for (int i = 0; i < points.Count; i++)
             {
 
@@ -115,7 +125,8 @@ public class Intersection_List {
                 dy = points[(i + 1) % points.Count].position.y - points[i].position.y;
 
                 //The normal depends on if the test_point was inside the collider.
-                if (test)
+                Vector2 normal;
+                if (test1)
                     normal = new Vector2(dy, -dx).normalized;
                 else normal = new Vector2(-dy, dx).normalized;
 
@@ -170,6 +181,20 @@ public class Intersection_List {
                 }
 
             }
+
+        }
+
+    }
+
+    //Sorts the intersections.
+    public void SortIntersections()
+    {
+
+        for(int i = 0; i < points.Count; i++)
+        {
+
+            points[i].intersections[0] = points[i].intersections[0].OrderBy(x => Vector2.Distance(points[i].position, x.intersection)).ToList();
+            points[i].intersections[1] = points[i].intersections[1].OrderBy(x => Vector2.Distance(points[i].position, x.intersection)).ToList();
 
         }
 

@@ -337,6 +337,8 @@ public class Shape : MonoBehaviour {
 
     }
 
+    static bool debug_draw = true;
+    Vector2 point_ = Vector2.zero;
     public void Merge(Shape shape)
     {
 
@@ -363,14 +365,19 @@ public class Shape : MonoBehaviour {
         Vector2 start_point = intersection_lists[target_list].points[point_index].position;
         List<Vector2> vertices = new List<Vector2>();
         bool finished = false;
-        while (!finished)
+
+        int safe = 0;
+        while (!finished && safe < 1000)
         {
+
+            safe++;
+
             List<Vector2> traversed_points;
             int exit_index;
 
             finished = TraverseIntersectionList(intersection_lists[target_list], point_index, start_point, direction, out exit_index, out traversed_points);
 
-            if(traversed_points.Count != 0)
+            if (traversed_points.Count != 0)
             {
 
                 Vector2 last_point = traversed_points[0];
@@ -378,7 +385,8 @@ public class Shape : MonoBehaviour {
                 for (int i = 0; i < traversed_points.Count; i++)
                 {
 
-                    //Debug.DrawLine(last_point, traversed_points[i], color, 10);
+                    if (safe > 900)
+                        Debug.DrawLine(last_point, traversed_points[i], Color.green, 100);
                     vertices.Add(traversed_points[i]);
                     last_point = traversed_points[i];
 
@@ -394,6 +402,22 @@ public class Shape : MonoBehaviour {
                 //We get the intersection and add it to the vertex list.
                 Intersection intersection = intersection_lists[target_list].points[exit_index].GetClosestIntersection(direction);
                 vertices.Add(intersection.intersection);
+
+                Color color = new Color(Random.Range(0f, 1f), Random.Range(0f, 1f), Random.Range(0f, 1f));
+                if (safe > 900 && debug_draw)
+                {
+
+                    //Debug.DrawLine(intersection_lists[target_list].points[exit_index].position, intersection.intersection, Color.red, 100);
+
+                    Debug.DrawLine(intersection_lists[target_list].points[exit_index].position, intersection_lists[target_list].points[(exit_index + 1) % intersection_lists[target_list].points.Count].position, color, 100);
+                    Debug.DrawLine(intersection.points[0].position, intersection.points[1].position, color, 100);
+                    //if(point_ != Vector2.zero)
+                    //Debug.DrawLine(intersection.intersection, point_, Color.green, 10);
+                    //point_ = intersection.intersection;
+
+                }
+                if (safe > 990)
+                    debug_draw = true;
 
                 //This switches the target line.
                 target_list = 1 - target_list;
@@ -413,6 +437,13 @@ public class Shape : MonoBehaviour {
                 //If we've reached our starting point we're finished.
                 if (Vector2.Distance(intersection_lists[target_list].points[point_index].position, start_point) < 0.001f)
                     finished = true;
+
+                if (safe > 900 && debug_draw)
+                {
+
+                    //Debug.DrawLine(intersection.intersection, intersection_lists[target_list].points[point_index].position, Color.red, 100);
+
+                }
 
             }
 
