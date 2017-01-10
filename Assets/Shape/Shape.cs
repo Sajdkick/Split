@@ -350,11 +350,17 @@ public class Shape : MonoBehaviour {
 
         Intersection_List.Create_Lists(path1, collider, path2, shape.collider, out intersection_lists[0], out intersection_lists[1]);
 
+        intersection_lists[0].Draw();
+        intersection_lists[1].Draw();
+
+        DrawIntersections(intersection_lists[0], Color.red);
+        //DrawIntersections(intersection_lists[1], Color.green);
+
         //We decide which point to start on, we make sure it's not within the bounds of a shape.
         int point_index = 0;
         if (shape.collider.OverlapPoint(intersection_lists[0].points[0].position))
         {
-            point_index = 1;
+            point_index = 1; 
         }
 
         //Are we moving backward or forward.
@@ -366,6 +372,7 @@ public class Shape : MonoBehaviour {
         List<Vector2> vertices = new List<Vector2>();
         bool finished = false;
 
+        //We sew together the two shapes, if everything works as intended, the safe will not be needed. But of course we need it.
         int safe = 0;
         while (!finished && safe < 1000)
         {
@@ -375,8 +382,10 @@ public class Shape : MonoBehaviour {
             List<Vector2> traversed_points;
             int exit_index;
 
+            //We traverse one of the lists until we get to an intersection, the traversed points are added to the new shape.
             finished = TraverseIntersectionList(intersection_lists[target_list], point_index, start_point, direction, out exit_index, out traversed_points);
 
+            //We add the traversed points to the vector list.
             if (traversed_points.Count != 0)
             {
 
@@ -393,55 +402,88 @@ public class Shape : MonoBehaviour {
                 }
 
             }
-
+            
+            //If we didnt finish, we must have reached an intersection and have to deal with it.
             if (!finished)
             {
 
+                //The normal of the line that we're moving from.
                 Vector2 line_normal = intersection_lists[target_list].points[exit_index].normals[direction];
 
                 //We get the intersection and add it to the vertex list.
                 Intersection intersection = intersection_lists[target_list].points[exit_index].GetClosestIntersection(direction);
                 vertices.Add(intersection.intersection);
 
-                Color color = new Color(Random.Range(0f, 1f), Random.Range(0f, 1f), Random.Range(0f, 1f));
-                if (safe > 900 && debug_draw)
+                bool intersection_chain = true;
+                while (intersection_chain)
                 {
 
-                    //Debug.DrawLine(intersection_lists[target_list].points[exit_index].position, intersection.intersection, Color.red, 100);
+                    //We check if we want to change direction at the moment. We want to move in the direction of the normal.
+                    if (Vector2.Dot(line_normal, intersection.intersection - intersection.points[1].position) < 0)
+                    {
 
-                    Debug.DrawLine(intersection_lists[target_list].points[exit_index].position, intersection_lists[target_list].points[(exit_index + 1) % intersection_lists[target_list].points.Count].position, color, 100);
-                    Debug.DrawLine(intersection.points[0].position, intersection.points[1].position, color, 100);
-                    //if(point_ != Vector2.zero)
-                    //Debug.DrawLine(intersection.intersection, point_, Color.green, 10);
-                    //point_ = intersection.intersection;
+                        direction = 1;
 
-                }
-                if (safe > 990)
-                    debug_draw = true;
+                    }
+                    else direction = 0;
 
-                //This switches the target line.
-                target_list = 1 - target_list;
+                    List<Intersection> target_intersections = intersection.points[direction].intersections[1 - direction];
 
-                //We check if we want to change direction at the moment. We want to move in the direction of the normal.
-                if (Vector2.Dot(line_normal, intersection.intersection - intersection.points[1].position) < 0)
-                {
+                    if (intersection.intersection.Equals(target_intersections[0].intersection))
+                    {
 
-                    direction = 1;
+                        intersection_chain = false;
 
-                }
-                else direction = 0;
+                        //This switches the target line.
+                        target_list = 1 - target_list;
 
-                //We update the point_index to match the new target list and point.
-                point_index = intersection.points[direction].index;
+                        //We update the point_index to match the new target list and point.
+                        point_index = intersection.points[direction].index;
 
-                //If we've reached our starting point we're finished.
-                if (Vector2.Distance(intersection_lists[target_list].points[point_index].position, start_point) < 0.001f)
-                    finished = true;
+                        //If we've reached our starting point we're finished.
+                        if (Vector2.Distance(intersection_lists[target_list].points[point_index].position, start_point) < 0.001f)
+                            finished = true;
 
-                if (safe > 900 && debug_draw)
-                {
+                    }
+                    else
+                    {
 
-                    //Debug.DrawLine(intersection.intersection, intersection_lists[target_list].points[point_index].position, Color.red, 100);
+                        intersection_chain = true;
+
+                        Intersection last_intersection = target_intersections[0];
+                        for (int i = 1; i < target_intersections.Count; i++)
+                        {
+
+                            if (target_intersections[i].intersection.Equals(intersection.intersection))
+                            {
+
+                                vertices.Add(last_intersection.intersection);
+                                intersection = last_intersection;
+
+                                //This switches the target line.
+                                target_list = 1 - target_list;
+
+                                line_normal = intersection.points[direction].normals[1 - direction];
+                                //We check if we want to change direction at the moment. We want to move in the direction of the normal.
+                                if (Vector2.Dot(line_normal, intersection.intersection - intersection.points[1].position) < 0)
+                                {
+
+                                    direction = 1;
+
+                                }
+                                else direction = 0;
+
+                            }
+                            else
+                            {
+
+                                last_intersection = target_intersections[i];
+
+                            }
+
+                        }
+
+                    }
 
                 }
 
@@ -666,6 +708,33 @@ public class Shape : MonoBehaviour {
         for (int i = 0; i < piece.Length - 1; i++) {
 
             Debug.DrawLine(piece[i], piece[i + 1], color * ((i + 1)/(float)piece.Length), 10);
+
+        }
+
+    }
+
+    void DrawPoint(Vector3 point, Color color)
+    {
+
+        Debug.DrawLine(point - Vector3.right * 0.1f, point + Vector3.right * 0.1f, color, 10);
+        Debug.DrawLine(point - Vector3.up * 0.1f, point + Vector3.up * 0.1f, color, 10);
+
+    }
+
+    void DrawIntersections(Intersection_List intersection_list, Color color)
+    {
+
+        List<Point> points_1 = intersection_list.points;
+        for (int j = 0; j < points_1.Count; j++)
+        {
+
+            List<Intersection> intersections_1 = points_1[j].intersections[1];
+            for (int i = 0; i < intersections_1.Count; i++)
+            {
+
+                DrawPoint(intersections_1[i].intersection, new Color(((float)i / intersections_1.Count) * color.r, ((float)i / intersections_1.Count) * color.g, ((float)i / intersections_1.Count) * color.b));
+
+            }
 
         }
 

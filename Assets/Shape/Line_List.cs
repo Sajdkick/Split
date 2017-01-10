@@ -63,6 +63,7 @@ public class Intersection_List {
         list_2 = new Intersection_List(path2, collider2);
 
         list_1.SetIntersections(list_2);
+
         list_1.SortIntersections();
         list_2.SortIntersections();
 
