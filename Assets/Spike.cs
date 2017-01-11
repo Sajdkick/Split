@@ -87,7 +87,7 @@ public class Spike : MonoBehaviour {
         if (split && coll.relativeVelocity.magnitude > 1.0f)
         {
 
-            coll.gameObject.GetComponent<Shape>().Split(point, point + direction);
+            coll.gameObject.GetComponent<Shape_Handler>().Split(point, point + direction);
 
         }
 
@@ -110,7 +110,7 @@ public class Spike : MonoBehaviour {
         if (split && coll.relativeVelocity.magnitude > 2.0f)
         {
 
-            coll.gameObject.GetComponent<Shape>().Split(point, point + direction);
+            coll.gameObject.GetComponent<Shape_Handler>().Split(point, point + direction);
 
         }
 

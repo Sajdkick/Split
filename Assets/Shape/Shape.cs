@@ -11,8 +11,6 @@ public class Shape : MonoBehaviour {
     static int id = 0;
     static List<GameObject> shapeList = new List<GameObject>();
 
-    bool merging;
-
     // Use this for initialization
     void Awake() {
 
@@ -20,13 +18,14 @@ public class Shape : MonoBehaviour {
         collider = gameObject.AddComponent<PolygonCollider2D>();
 
         gameObject.AddComponent<MeshRenderer>();
-        gameObject.AddComponent<Rigidbody2D>();
 
         gameObject.name = id.ToString();
         id++;
 
-        merging = false;
+        GameObject parent = new GameObject();
+        parent.AddComponent<Shape_Handler> ();
 
+        gameObject.transform.parent = parent.transform;
         gameObject.layer = 1;
 
         shapeList.Add(gameObject);
@@ -103,19 +102,19 @@ public class Shape : MonoBehaviour {
     public static void SplitAll(Vector2 point3, Vector2 point4)
     {
 
-        int nrOfShapes = shapeList.Count;
-        int count = 0;
-        for(int i = 0; i < nrOfShapes; i++)
-        {
+        //int nrOfShapes = shapeList.Count;
+        //int count = 0;
+        //for(int i = 0; i < nrOfShapes; i++)
+        //{
 
-            if(shapeList[i - count].GetComponent<Shape>().Split(point3, point4))
-            {
+        //    if(shapeList[i - count].GetComponent<Shape>().Split(point3, point4))
+        //    {
 
-                count++;
+        //        count++;
 
-            }
+        //    }
 
-        }
+        //}
 
     }
 
@@ -326,7 +325,8 @@ public class Shape : MonoBehaviour {
 
         }
 
-        PuzzleMaster(vertexLists, orderedSplits, voids);
+        //We create the new shapes and merge the new pieces if they overlap.
+        List<Shape> new_shapes = PuzzleMaster(vertexLists, orderedSplits, voids);
 
         //GameObject shape = new GameObject();
         //shape.AddComponent<Shape>().SetMesh(vertexLists[i].ToArray());
@@ -334,171 +334,6 @@ public class Shape : MonoBehaviour {
         Destroy(this.gameObject);
 
         return true;
-
-    }
-
-    static bool debug_draw = true;
-    Vector2 point_ = Vector2.zero;
-    public void Merge(Shape shape)
-    {
-
-        //Get the paths from the shapes
-        Vector2[] path1 = GetShapePath(this);
-        Vector2[] path2 = GetShapePath(shape);
-
-        Intersection_List[] intersection_lists = new Intersection_List[2];
-
-        Intersection_List.Create_Lists(path1, collider, path2, shape.collider, out intersection_lists[0], out intersection_lists[1]);
-
-        intersection_lists[0].Draw();
-        intersection_lists[1].Draw();
-
-        DrawIntersections(intersection_lists[0], Color.red);
-        //DrawIntersections(intersection_lists[1], Color.green);
-
-        //We decide which point to start on, we make sure it's not within the bounds of a shape.
-        int point_index = 0;
-        if (shape.collider.OverlapPoint(intersection_lists[0].points[0].position))
-        {
-            point_index = 1; 
-        }
-
-        //Are we moving backward or forward.
-        int direction = 1;
-        //Are we moving on the first or the second shape.
-        int target_list = 0;
-        //The point we started on. If we reach this, we're done with the merge.
-        Vector2 start_point = intersection_lists[target_list].points[point_index].position;
-        List<Vector2> vertices = new List<Vector2>();
-        bool finished = false;
-
-        //We sew together the two shapes, if everything works as intended, the safe will not be needed. But of course we need it.
-        int safe = 0;
-        while (!finished && safe < 1000)
-        {
-
-            safe++;
-
-            List<Vector2> traversed_points;
-            int exit_index;
-
-            //We traverse one of the lists until we get to an intersection, the traversed points are added to the new shape.
-            finished = TraverseIntersectionList(intersection_lists[target_list], point_index, start_point, direction, out exit_index, out traversed_points);
-
-            //We add the traversed points to the vector list.
-            if (traversed_points.Count != 0)
-            {
-
-                Vector2 last_point = traversed_points[0];
-                Color color = new Color(Random.Range(0f, 1f), Random.Range(0f, 1f), Random.Range(0f, 1f), Random.Range(0f, 1f));
-                for (int i = 0; i < traversed_points.Count; i++)
-                {
-
-                    if (safe > 900)
-                        Debug.DrawLine(last_point, traversed_points[i], Color.green, 100);
-                    vertices.Add(traversed_points[i]);
-                    last_point = traversed_points[i];
-
-                }
-
-            }
-            
-            //If we didnt finish, we must have reached an intersection and have to deal with it.
-            if (!finished)
-            {
-
-                //The normal of the line that we're moving from.
-                Vector2 line_normal = intersection_lists[target_list].points[exit_index].normals[direction];
-
-                //We get the intersection and add it to the vertex list.
-                Intersection intersection = intersection_lists[target_list].points[exit_index].GetClosestIntersection(direction);
-                vertices.Add(intersection.intersection);
-
-                bool intersection_chain = true;
-                while (intersection_chain)
-                {
-
-                    //We check if we want to change direction at the moment. We want to move in the direction of the normal.
-                    if (Vector2.Dot(line_normal, intersection.intersection - intersection.points[1].position) < 0)
-                    {
-
-                        direction = 1;
-
-                    }
-                    else direction = 0;
-
-                    List<Intersection> target_intersections = intersection.points[direction].intersections[1 - direction];
-
-                    if (intersection.intersection.Equals(target_intersections[0].intersection))
-                    {
-
-                        intersection_chain = false;
-
-                        //This switches the target line.
-                        target_list = 1 - target_list;
-
-                        //We update the point_index to match the new target list and point.
-                        point_index = intersection.points[direction].index;
-
-                        //If we've reached our starting point we're finished.
-                        if (Vector2.Distance(intersection_lists[target_list].points[point_index].position, start_point) < 0.001f)
-                            finished = true;
-
-                    }
-                    else
-                    {
-
-                        intersection_chain = true;
-
-                        Intersection last_intersection = target_intersections[0];
-                        for (int i = 1; i < target_intersections.Count; i++)
-                        {
-
-                            if (target_intersections[i].intersection.Equals(intersection.intersection))
-                            {
-
-                                vertices.Add(last_intersection.intersection);
-                                intersection = last_intersection;
-
-                                //This switches the target line, we dont really want that. But this makes it so we change back later. Should change this.
-                                target_list = 1 - target_list;
-
-                                line_normal = intersection.points[direction].normals[1 - direction];
-
-                            }
-                            else
-                            {
-
-                                last_intersection = target_intersections[i];
-
-                            }
-
-                        }
-
-                    }
-
-                }
-
-            }
-
-        }
-
-        List<Vector3> vertex_list = new List<Vector3>();
-
-        for(int i = 0; i < vertices.Count; i++)
-        {
-
-            vertex_list.Add(vertices[i]);
-
-        }
-
-        CreateShape(vertex_list);
-
-        shapeList.Remove(this.gameObject);
-        Destroy(this.gameObject);
-        shapeList.Remove(shape.gameObject);
-        Destroy(shape.gameObject);
-
 
     }
 
@@ -520,67 +355,11 @@ public class Shape : MonoBehaviour {
 
     }
 
-    //Goes through all the points until it hits an intersection.
-    private bool TraverseIntersectionList(Intersection_List list, int start_index, Vector2 target_point, int direction, out int exit_index, out List<Vector2> traversed_points)
-    {
-
-        traversed_points = new List<Vector2>();
-
-        //We add the start point to our traversed points list.
-        traversed_points.Add(list.points[start_index].position);
-        exit_index = start_index;
-
-        //If our first line segment intersects, we exit.
-        if(list.points[start_index].intersections[direction].Count != 0)
-        {
-
-            return false;
-
-        }
-
-        int i = start_index;
-        int ic = (-1 + 2 * direction);
-        do{
-
-                i += ic;
-
-                if (i < 0)
-                    i = list.points.Count - 1;
-
-                if (i >= list.points.Count)
-                    i = 0;
-
-                exit_index = i;
-
-                //If we've reached our target point we break;
-                if (Vector3.Distance(list.points[i].position, target_point) < 0.0001f)
-                {
-
-                    return true;
-
-                }
-
-                Vector2 new_point = list.points[i].position;
-                traversed_points.Add(new_point);
-                if (list.points[i].intersections[direction].Count != 0)
-                {
-
-
-                    return false;
-
-                }
-
-            } while (i != start_index);
-
-        exit_index = i % list.points.Count;
-
-        return true;
-
-    }
-
     //Sews together pieces and voids and creates shapes.
-    void PuzzleMaster(List<List<Vector3>> pieces, List<Vector3> splits, List<List<Vector3>> voids)
+    List<Shape> PuzzleMaster(List<List<Vector3>> pieces, List<Vector3> splits, List<List<Vector3>> voids)
     {
+
+        List<Shape> new_shapes = new List<Shape>();
 
         for(int i = 0; i < pieces.Count; i++)
         {
@@ -596,6 +375,7 @@ public class Shape : MonoBehaviour {
 
                 GameObject shape = new GameObject();
                 shape.AddComponent<Shape>().SetPath(piece.ToArray());
+                new_shapes.Add(shape.GetComponent<Shape>());
 
             }
             else
@@ -607,6 +387,7 @@ public class Shape : MonoBehaviour {
                 {
                     GameObject shape = new GameObject();
                     shape.AddComponent<Shape>().SetPath(piece.ToArray());
+                    new_shapes.Add(shape.GetComponent<Shape>());
                 }
                 else
                 {
@@ -650,6 +431,7 @@ public class Shape : MonoBehaviour {
 
                     GameObject shape = new GameObject();
                     shape.AddComponent<Shape>().SetPath(piece.ToArray());
+                    new_shapes.Add(shape.GetComponent<Shape>());
 
                 }
 
@@ -657,8 +439,9 @@ public class Shape : MonoBehaviour {
 
         }
 
-    }
+        return new_shapes;
 
+    }
     List<int> GetSplits(List<Vector3> piece, List<Vector3> splits)
     {
 
@@ -678,7 +461,6 @@ public class Shape : MonoBehaviour {
         return matches;
 
     }
-
     //Adds a void to the piece
     List<Vector3> AddVoid(List<Vector3> theVoid, List<Vector3> piece)
     {
@@ -710,25 +492,6 @@ public class Shape : MonoBehaviour {
 
         Debug.DrawLine(point - Vector3.right * 0.1f, point + Vector3.right * 0.1f, color, 10);
         Debug.DrawLine(point - Vector3.up * 0.1f, point + Vector3.up * 0.1f, color, 10);
-
-    }
-
-    void DrawIntersections(Intersection_List intersection_list, Color color)
-    {
-
-        List<Point> points_1 = intersection_list.points;
-        for (int j = 0; j < points_1.Count; j++)
-        {
-
-            List<Intersection> intersections_1 = points_1[j].intersections[1];
-            for (int i = 0; i < intersections_1.Count; i++)
-            {
-
-                DrawPoint(intersections_1[i].intersection, new Color(((float)i / intersections_1.Count) * color.r, ((float)i / intersections_1.Count) * color.g, ((float)i / intersections_1.Count) * color.b));
-
-            }
-
-        }
 
     }
 
@@ -788,20 +551,6 @@ public class Shape : MonoBehaviour {
         }
 
         CreateShape(vertices);
-
-    }
-
-    void OnTriggerStay2D(Collider2D stay) {
-
-        if (lifetime > 60 && !merging && stay.gameObject.layer == 1) {
-
-            print("Merging");
-            merging = true;
-            stay.GetComponent<Shape>().merging = true;
-
-            Merge(stay.GetComponent<Shape>());
-
-        }
 
     }
 
