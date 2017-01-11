@@ -460,18 +460,10 @@ public class Shape : MonoBehaviour {
                                 vertices.Add(last_intersection.intersection);
                                 intersection = last_intersection;
 
-                                //This switches the target line.
+                                //This switches the target line, we dont really want that. But this makes it so we change back later. Should change this.
                                 target_list = 1 - target_list;
 
                                 line_normal = intersection.points[direction].normals[1 - direction];
-                                //We check if we want to change direction at the moment. We want to move in the direction of the normal.
-                                if (Vector2.Dot(line_normal, intersection.intersection - intersection.points[1].position) < 0)
-                                {
-
-                                    direction = 1;
-
-                                }
-                                else direction = 0;
 
                             }
                             else
