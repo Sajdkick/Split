@@ -8,18 +8,22 @@ public class Drawer : MonoBehaviour {
 
     LineRenderer lineRenderer;
 
-    List<Vector3> points;
+    public List<Vector3> points;
 
     float minDistance = 1f;
+
+    public UnityEngine.UI.Toggle Shape_Toggle;
+    public UnityEngine.UI.Toggle Obstacle_Toggle;
+    public UnityEngine.UI.Toggle Spike_Toggle;
 
     //What are 
     uint mode;
 
     // Use this for initialization
     void Start () {
-
+ 
         lineRenderer = gameObject.AddComponent<LineRenderer>();
-        lineRenderer.material = new Material(Shader.Find("Particles/Additive"));
+        lineRenderer.material = (Material)Resources.Load("Line_Material");
         lineRenderer.SetColors(Color.red, Color.red);
         lineRenderer.SetWidth(0.2F, 0.2F);
         lineRenderer.SetVertexCount(0);
@@ -29,37 +33,80 @@ public class Drawer : MonoBehaviour {
 
         Physics2D.IgnoreLayerCollision(1, 1);
 
+        ShapeMode();
+
     }
 
+    bool isEnabled = true;
     // Update is called once per frame
     void Update () {
 
-        drawing = points.Count != 0;
+        if (isEnabled)
+        {
 
-        AddPoints();
+            drawing = points.Count != 0;
+
+            AddPoints();
+            DrawLine();
+
+            if (Input.GetKey(KeyCode.Escape))
+            {
+                points.Clear();
+            }
+
+            if (Input.GetKeyUp(KeyCode.Q))
+                Shape_Toggle.isOn = true;
+            if (Input.GetKeyUp(KeyCode.W))
+                Obstacle_Toggle.isOn = true;
+            if (Input.GetKeyUp(KeyCode.E))
+                Spike_Toggle.isOn = true;
+
+            if (Input.GetKeyUp(KeyCode.R))
+            {
+
+                Shape.LoadFromFile("137.1177.txt");
+
+            }
+
+        }
+
+    }
+
+    public void Enable()
+    {
+
+        ShapeMode();
+        isEnabled = true;
+
+    }
+    public void Disable()
+    {
+
+        points.Clear();
         DrawLine();
+        isEnabled = false;
 
-        if (Input.GetKey(KeyCode.Escape))
-        {
-            points.Clear();
-        }
+    }
 
-        if (Input.GetKeyUp(KeyCode.Q))
-        {
+    public void ShapeMode()
+    {
 
-            mode++;
-            mode %= 3;
+        mode = 0;
+        lineRenderer.material.color = Color.green;
 
-            print(mode);
+    }
+    public void ObstacleMode()
+    {
 
-        }
+        mode = 1;
+        lineRenderer.material.color = Color.blue;
 
-        if (Input.GetKeyUp(KeyCode.W))
-        {
+    }
+    public void SpikeMode()
+    {
 
-            Shape.LoadFromFile("137.1177.txt");
-            
-        }
+        mode = 2;
+        lineRenderer.material.color = Color.red;
 
     }
 
@@ -69,99 +116,106 @@ public class Drawer : MonoBehaviour {
         if (Input.GetMouseButtonUp(0))
         {
 
-            Vector2 mousePos = Camera.main.ScreenToWorldPoint(Input.mousePosition);
-            
-            //If we got more than two points we can close the shape.            
-            if (points.Count >= 2)
+            print(Input.mousePosition);
+
+            if(Input.mousePosition.x < Screen.width - Screen.width/7f)
             {
 
-                if (mode == 2)
+                Vector2 mousePos = Camera.main.ScreenToWorldPoint(Input.mousePosition);
+
+                //If we got more than two points we can close the shape.            
+                if (points.Count >= 2)
+                {
+
+                    if (mode == 2)
+                    {
+
+                        points.Add(mousePos);
+                        Create();
+
+                    }
+                    else {
+
+                        //We make sure we dont cross any lines.
+                        bool add = true;
+                        for (int i = 0; i < points.Count - 2 && add; i++)
+                        {
+
+                            Vector2 point1 = points[i];
+                            Vector2 point2 = points[i + 1];
+                            Vector2 point3 = points[points.Count - 1];
+                            Vector2 point4 = mousePos;
+
+                            double A1 = point2.y - point1.y;
+                            double B1 = point1.x - point2.x;
+                            double C1 = A1 * point1.x + B1 * point1.y;
+
+                            double A2 = point4.y - point3.y;
+                            double B2 = point3.x - point4.x;
+                            double C2 = A2 * point3.x + B2 * point3.y;
+
+                            double det = A1 * B2 - A2 * B1;
+
+                            if (det != 0)
+                            {
+
+                                double x = (B2 * C1 - B1 * C2) / det;
+                                double y = (A1 * C2 - A2 * C1) / det;
+
+                                double minX1 = Mathf.Min(point1.x, point2.x);
+                                double maxX1 = Mathf.Max(point1.x, point2.x);
+                                double minY1 = Mathf.Min(point1.y, point2.y);
+                                double maxY1 = Mathf.Max(point1.y, point2.y);
+
+                                double minX2 = Mathf.Min(point3.x, point4.x);
+                                double maxX2 = Mathf.Max(point3.x, point4.x);
+                                double minY2 = Mathf.Min(point3.y, point4.y);
+                                double maxY2 = Mathf.Max(point3.y, point4.y);
+
+                                bool X1 = minX1 <= x && x <= maxX1;
+                                bool Y1 = minY1 <= y && y <= maxY1;
+                                bool X2 = minX2 <= x && x <= maxX2;
+                                bool Y2 = minY2 <= y && y <= maxY2;
+
+                                bool intersect = X1 && Y1 && X2 && Y2;
+
+                                //float dist1 = PointToLineDistance(point1, point2, point4);
+                                //float dist2 = PointToLineDistance(point3, point4, point1);
+                                //float dist3 = PointToLineDistance(point3, point4, point2);
+
+                                //bool tooClose = dist1 < minDistance || dist2 < minDistance || dist3 < minDistance;
+
+                                if (intersect)
+                                    add = false;
+
+                            }
+
+                        }
+
+
+                        if (add)
+                        {
+                            //If we try to create a point close to the first one, we close it.
+                            if (Vector2.Distance(points[0], mousePos) < 0.3f)
+                            {
+
+                                Create();
+
+                            }
+                            else
+                                points.Add(mousePos);
+
+                        }
+
+                    }
+
+                }
+                else
                 {
 
                     points.Add(mousePos);
-                    Create();
 
                 }
-                else {
-
-                    //We make sure we dont cross any lines.
-                    bool add = true;
-                    for (int i = 0; i < points.Count - 2 && add; i++)
-                    {
-
-                        Vector2 point1 = points[i];
-                        Vector2 point2 = points[i + 1];
-                        Vector2 point3 = points[points.Count - 1];
-                        Vector2 point4 = mousePos;
-
-                        double A1 = point2.y - point1.y;
-                        double B1 = point1.x - point2.x;
-                        double C1 = A1 * point1.x + B1 * point1.y;
-
-                        double A2 = point4.y - point3.y;
-                        double B2 = point3.x - point4.x;
-                        double C2 = A2 * point3.x + B2 * point3.y;
-
-                        double det = A1 * B2 - A2 * B1;
-
-                        if (det != 0)
-                        {
-
-                            double x = (B2 * C1 - B1 * C2) / det;
-                            double y = (A1 * C2 - A2 * C1) / det;
-
-                            double minX1 = Mathf.Min(point1.x, point2.x);
-                            double maxX1 = Mathf.Max(point1.x, point2.x);
-                            double minY1 = Mathf.Min(point1.y, point2.y);
-                            double maxY1 = Mathf.Max(point1.y, point2.y);
-
-                            double minX2 = Mathf.Min(point3.x, point4.x);
-                            double maxX2 = Mathf.Max(point3.x, point4.x);
-                            double minY2 = Mathf.Min(point3.y, point4.y);
-                            double maxY2 = Mathf.Max(point3.y, point4.y);
-
-                            bool X1 = minX1 <= x && x <= maxX1;
-                            bool Y1 = minY1 <= y && y <= maxY1;
-                            bool X2 = minX2 <= x && x <= maxX2;
-                            bool Y2 = minY2 <= y && y <= maxY2;
-
-                            bool intersect = X1 && Y1 && X2 && Y2;
-
-                            //float dist1 = PointToLineDistance(point1, point2, point4);
-                            //float dist2 = PointToLineDistance(point3, point4, point1);
-                            //float dist3 = PointToLineDistance(point3, point4, point2);
-
-                            //bool tooClose = dist1 < minDistance || dist2 < minDistance || dist3 < minDistance;
-
-                            if (intersect)
-                                add = false;
-
-                        }
-
-                    }
-
-
-                    if (add)
-                    {
-                        //If we try to create a point close to the first one, we close it.
-                        if (Vector2.Distance(points[0], mousePos) < 0.3f)
-                        {
-
-                            Create();
-
-                        }
-                        else
-                            points.Add(mousePos);
-
-                    }
-
-                }
-
-            }
-            else
-            {
-
-                points.Add(mousePos);
 
             }
 

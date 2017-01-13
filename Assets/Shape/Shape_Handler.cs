@@ -1,5 +1,5 @@
 ﻿using UnityEngine;
-using System.Collections;
+using System.Collections.Generic;
 
 public class Shape_Handler : MonoBehaviour {
 
@@ -13,6 +13,7 @@ public class Shape_Handler : MonoBehaviour {
 
     //Used for delaying the merge of newly split shapes.
     int lifetime = 0;
+    int fadetime = 30;
     void Update()
     {
 
@@ -21,15 +22,47 @@ public class Shape_Handler : MonoBehaviour {
 
         lifetime++;
 
+        for(int i = 0; i < transform.childCount; i++)
+        {
+
+            transform.GetChild(0).GetComponent<Renderer>().material.color = Color.green * (((float)lifetime * 0.5f) / fadetime) + Color.green * 0.5f;
+
+        }
+
     }
 
     public void Split(Vector2 point3, Vector2 point4)
     {
 
+        List<Shape> all_shapes = new List<Shape>();
         for (int i = 0; i < transform.childCount; i++)
         {
 
-            transform.GetChild(i).GetComponent<Shape>().Split(point3, point4);
+            List<Shape> new_shapes = transform.GetChild(i).GetComponent<Shape>().Split(point3, point4);
+
+            for(int j = 0; j < new_shapes.Count; j++)
+            {
+
+                all_shapes.Add(new_shapes[j]);
+
+            }
+
+        }
+
+        for(int i = 0; i < all_shapes.Count; i++)
+        {
+
+            for(int j = i; j < all_shapes.Count; j++)
+            {
+
+                if (all_shapes[i].collider.IsTouching(all_shapes[j].collider))
+                {
+
+                    all_shapes[i].transform.parent.GetComponent<Shape_Handler>().Merge(all_shapes[j]);
+
+                }
+
+            }
 
         }
 
@@ -44,11 +77,10 @@ public class Shape_Handler : MonoBehaviour {
 
     }
 
-
-    void OnTriggerEnter2D(Collider2D stay)
+     void OnTriggerStay2D(Collider2D stay)
     {
 
-        if (lifetime > 60 && stay.gameObject.layer == 1 && transform != stay.transform.parent.transform)
+        if (lifetime > fadetime && stay.gameObject.layer == 1 && stay.transform.parent.GetComponent<Shape_Handler>().lifetime > fadetime)
         {
 
             Merge(stay.GetComponent<Shape>());

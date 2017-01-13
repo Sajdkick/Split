@@ -12,7 +12,7 @@ public class Obstacle : MonoBehaviour {
         meshFilter = gameObject.AddComponent<MeshFilter>();
         collider = gameObject.AddComponent<PolygonCollider2D>();
 
-        gameObject.AddComponent<MeshRenderer>();
+        gameObject.AddComponent<MeshRenderer>().material = (Material)Resources.Load("Obstacle_Material");
         gameObject.AddComponent<Rigidbody2D>().isKinematic = true;
 
     }

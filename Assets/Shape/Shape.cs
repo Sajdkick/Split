@@ -5,7 +5,7 @@ using System.Collections.Generic;
 public class Shape : MonoBehaviour {
 
     MeshFilter meshFilter;
-    PolygonCollider2D collider;
+    public PolygonCollider2D collider;
     PolygonCollider2D trigger;
 
     static int id = 0;
@@ -17,7 +17,8 @@ public class Shape : MonoBehaviour {
         meshFilter = gameObject.AddComponent<MeshFilter>();
         collider = gameObject.AddComponent<PolygonCollider2D>();
 
-        gameObject.AddComponent<MeshRenderer>();
+        MeshRenderer renderer = gameObject.AddComponent<MeshRenderer>();
+        renderer.material = (Material)Resources.Load("Shape_Material");
 
         gameObject.name = id.ToString();
         id++;
@@ -36,15 +37,6 @@ public class Shape : MonoBehaviour {
     {
 
         AddTrigger();
-
-    }
-
-    //Used for delaying the merge of newly split shapes.
-    int lifetime = 0;
-    void Update()
-    {
-
-        lifetime++;
 
     }
 
@@ -119,7 +111,7 @@ public class Shape : MonoBehaviour {
     }
 
     //Split the shape.
-    public bool Split(Vector2 point3, Vector2 point4)
+    public List<Shape> Split(Vector2 point3, Vector2 point4)
     {
 
         List<Vector3> newVertices = new List<Vector3>();
@@ -176,8 +168,13 @@ public class Shape : MonoBehaviour {
         }
 
         if (splits.Count <= 1)
-            return false;
+        {
 
+            List<Shape> shapes = new List<Shape>();
+            shapes.Add(this);
+            return shapes;
+
+        }
 
         List<Vector3> listStart = new List<Vector3>();
         List<Vector3> listEnd = new List<Vector3>();
@@ -333,7 +330,7 @@ public class Shape : MonoBehaviour {
         shapeList.Remove(this.gameObject);
         Destroy(this.gameObject);
 
-        return true;
+        return new_shapes;
 
     }
 

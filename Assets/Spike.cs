@@ -66,7 +66,7 @@ public class Spike : MonoBehaviour {
         }
 
         meshFilter.mesh.triangles = triangles;
-        GetComponent<MeshRenderer>().material = new Material(Shader.Find("PieceShader"));
+        GetComponent<MeshRenderer>().material = (Material)Resources.Load("Spike_Material");
 
     }
 
