@@ -3,8 +3,14 @@ using System.Collections.Generic;
 
 public class Shape_Handler : MonoBehaviour {
 
-	// Use this for initialization
-	void Start () {
+    static int counter = 0;
+
+    public int id;
+    // Use this for initialization
+    void Start () {
+
+        id = counter;
+        counter++;
 
         gameObject.AddComponent<Rigidbody2D>();
         gameObject.layer = 1;
@@ -14,6 +20,7 @@ public class Shape_Handler : MonoBehaviour {
     //Used for delaying the merge of newly split shapes.
     int lifetime = 0;
     int fadetime = 30;
+
     void Update()
     {
 
@@ -80,10 +87,18 @@ public class Shape_Handler : MonoBehaviour {
      void OnTriggerStay2D(Collider2D stay)
     {
 
-        if (lifetime > fadetime && stay.gameObject.layer == 1 && stay.transform.parent.GetComponent<Shape_Handler>().lifetime > fadetime)
+        if (transform.parent != stay.transform.parent)
         {
 
-            Merge(stay.GetComponent<Shape>());
+            if (lifetime > fadetime && stay.gameObject.layer == 1)
+            {
+
+                Shape_Handler other_handler = stay.transform.parent.GetComponent<Shape_Handler>();
+
+                if (other_handler.lifetime > fadetime && other_handler.id > id)
+                    Merge(stay.GetComponent<Shape>());
+
+            }
 
         }
 

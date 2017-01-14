@@ -116,8 +116,6 @@ public class Drawer : MonoBehaviour {
         if (Input.GetMouseButtonUp(0))
         {
 
-            print(Input.mousePosition);
-
             if(Input.mousePosition.x < Screen.width - Screen.width/7f)
             {
 
