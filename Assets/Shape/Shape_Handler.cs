@@ -7,7 +7,7 @@ public class Shape_Handler : MonoBehaviour {
 
     public int id;
     // Use this for initialization
-    void Start () {
+    void Awake () {
 
         id = counter;
         counter++;
@@ -59,13 +59,40 @@ public class Shape_Handler : MonoBehaviour {
         for(int i = 0; i < all_shapes.Count; i++)
         {
 
-            for(int j = i; j < all_shapes.Count; j++)
+            float dx = point4.x - point3.x;
+            float dy = point4.y - point3.y;
+
+            if (!isLeft(point3, point4, all_shapes[i].collider.bounds.center))
             {
 
-                if (all_shapes[i].collider.IsTouching(all_shapes[j].collider))
+                all_shapes[i].transform.Translate(new Vector2(dy, -dx) * 0.01f);
+
+            } else all_shapes[i].transform.Translate(new Vector2(-dy, dx) * 0.01f);
+
+
+        }
+
+        for (int i = 0; i < all_shapes.Count; i++)
+        {
+
+            for (int j = i; j < all_shapes.Count; j++)
+            {
+
+                if (all_shapes[i].transform.parent != all_shapes[j].transform)
                 {
 
-                    all_shapes[i].transform.parent.GetComponent<Shape_Handler>().Merge(all_shapes[j]);
+                    if (all_shapes[i].Intersecting(all_shapes[j]))
+                    {
+
+                        if (isLeft(point3, point4, all_shapes[i].collider.bounds.center) == isLeft(point3, point4, all_shapes[j].collider.bounds.center))
+                            for (int x = 0; x < all_shapes[j].transform.parent.childCount; x++)
+                            {
+
+                                all_shapes[j].transform.parent.GetChild(x).transform.parent = all_shapes[i].transform.parent;
+
+                            }
+
+                    }
 
                 }
 
@@ -73,6 +100,11 @@ public class Shape_Handler : MonoBehaviour {
 
         }
 
+
+    }
+    public bool isLeft(Vector2 a, Vector2 b, Vector2 c)
+    {
+        return ((b.x - a.x) * (c.y - a.y) - (b.y - a.y) * (c.x - a.x)) > 0;
     }
 
     public void Merge(Shape new_shape)
@@ -101,6 +133,53 @@ public class Shape_Handler : MonoBehaviour {
             }
 
         }
+
+    }
+
+    //Saves the piece to a file.
+    public void SaveToFile(string name)
+    {
+
+        List<string> string_lines = new List<string>();
+        for (int i = 0; i < transform.childCount; i++)
+        {
+
+            Vector2[] path = transform.GetChild(i).GetComponent<PolygonCollider2D>().GetPath(0);
+            for (int j = 0; j < path.Length; j++)
+            {
+
+                Vector3 vertex = transform.localToWorldMatrix.MultiplyPoint3x4(path[j]);
+
+                string_lines.Add(vertex.x.ToString());
+                string_lines.Add(vertex.y.ToString());
+
+            }
+
+            string_lines.Add("X");
+            string_lines.Add("Y");
+
+        }
+
+        System.IO.File.WriteAllLines(name + ".txt", string_lines.ToArray());
+
+    }
+
+    //Saves the piece to a file.
+    static void SaveToFile(Vector3[] vertices, string name)
+    {
+
+        string[] string_lines = new string[vertices.Length * 2];
+        for (int i = 0; i < vertices.Length; i++)
+        {
+
+            print(vertices[i].x.ToString() + ":" + vertices[i].y.ToString());
+
+            string_lines[i * 2] = vertices[i].x.ToString();
+            string_lines[i * 2 + 1] = vertices[i].y.ToString();
+
+        }
+
+        System.IO.File.WriteAllLines(name + ".txt", string_lines);
 
     }
 

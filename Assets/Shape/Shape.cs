@@ -24,6 +24,7 @@ public class Shape : MonoBehaviour {
         id++;
 
         GameObject parent = new GameObject();
+        parent.tag = "Shape_Handler";
         parent.AddComponent<Shape_Handler> ();
 
         gameObject.transform.parent = parent.transform;
@@ -40,10 +41,11 @@ public class Shape : MonoBehaviour {
 
     }
 
-    public static void CreateShape(List<Vector3> path)
+    public static Shape CreateShape(List<Vector3> path)
     {
         GameObject shape = new GameObject();
         shape.AddComponent<Shape>().SetPath(path.ToArray());
+        return shape.GetComponent<Shape>();
     }
 
     //Set the shapes path.
@@ -473,6 +475,40 @@ public class Shape : MonoBehaviour {
 
     }
 
+    public bool Intersecting(Shape shape)
+    {
+
+        Vector2[] path1 = GetShapePath(this);
+        Vector2[] path2 = GetShapePath(shape);
+
+        for(int i = 0; i < path2.Length; i++)
+        {
+
+            if (collider.OverlapPoint(path2[i]))
+                return true;
+
+        }
+
+        for(int i = 0; i < path1.Length; i++)
+        {
+
+            for(int j = 0; j < path2.Length; j++)
+            {
+
+                Vector2 intersection;
+                bool intersected = MathF.LineIntersection(path1[i], path1[(i + 1) % path1.Length], path2[j], path2[(j + 1) % path2.Length], out intersection);
+
+                if (intersected)
+                    return true;
+
+            }
+
+        }
+
+        return false;
+
+    }
+
     //Draws a piece, used for debugging.
     void DrawPiece(Vector3[] piece, Color color) {
 
@@ -489,65 +525,6 @@ public class Shape : MonoBehaviour {
 
         Debug.DrawLine(point - Vector3.right * 0.1f, point + Vector3.right * 0.1f, color, 10);
         Debug.DrawLine(point - Vector3.up * 0.1f, point + Vector3.up * 0.1f, color, 10);
-
-    }
-
-    //Saves the piece to a file.
-    void SaveToFile()
-    {
-
-        Vector2[] path = collider.GetPath(0);
-        string[] string_lines = new string[path.Length];
-        for (int i = 0; i < path.Length; i++)
-        {
-
-            string_lines[i] = transform.localToWorldMatrix.MultiplyPoint3x4(path[i]).ToString();
-
-        }
-
-        System.IO.File.WriteAllLines("/SavedShapes/Shape" + id + ".txt", string_lines);
-
-    }
-
-    //Saves the piece to a file.
-    static void SaveToFile(Vector3[] vertices, string name)
-    {
-
-        string[] string_lines = new string[vertices.Length * 2];
-        for (int i = 0; i < vertices.Length; i++)
-        {
-
-            print(vertices[i].x.ToString() + ":" + vertices[i].y.ToString());
-
-            string_lines[i * 2] = vertices[i].x.ToString();
-            string_lines[i * 2 + 1] = vertices[i].y.ToString();
-
-        }
-
-        System.IO.File.WriteAllLines(name + ".txt", string_lines);
-
-    }
-
-    public static void LoadFromFile(string path) {
-
-        System.Globalization.NumberFormatInfo format = new System.Globalization.NumberFormatInfo();
-        format.NegativeSign = "-";
-        format.NumberDecimalSeparator = ".";
-        string[] string_lines = System.IO.File.ReadAllLines(path);
-
-
-
-        List<Vector3> vertices = new List<Vector3>();
-        for(int i = 0; i < string_lines.Length / 2; i++)
-        {
-
-            //print(float.Parse(lines[i * 2]) + ":" + float.Parse(lines[i * 2 + 1]));
-
-            vertices.Add(new Vector3(float.Parse(string_lines[i * 2]), float.Parse(string_lines[i * 2 + 1]), 0));
-
-        }
-
-        CreateShape(vertices);
 
     }
 

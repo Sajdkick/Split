@@ -37,7 +37,7 @@ public class Drawer : MonoBehaviour {
 
     }
 
-    bool isEnabled = true;
+    public bool isEnabled = true;
     // Update is called once per frame
     void Update () {
 
@@ -64,7 +64,7 @@ public class Drawer : MonoBehaviour {
             if (Input.GetKeyUp(KeyCode.R))
             {
 
-                Shape.LoadFromFile("137.1177.txt");
+                //Shape.LoadFromFile("137.1177.txt");
 
             }
 
@@ -75,7 +75,6 @@ public class Drawer : MonoBehaviour {
     public void Enable()
     {
 
-        ShapeMode();
         isEnabled = true;
 
     }
@@ -248,7 +247,7 @@ public class Drawer : MonoBehaviour {
         switch (mode) {
 
             case 0:
-                Shape.CreateShape(points);
+                Shape.CreateShape(points).transform.parent.GetComponent<Shape_Handler>().SaveToFile("main");
                 break;
             case 1:
                 Obstacle.CreateObstacle(points.ToArray());

@@ -1,4 +1,4 @@
-﻿Shader "PieceShader"
+﻿Shader "SpikeShader"
 {
 	SubShader
 	{

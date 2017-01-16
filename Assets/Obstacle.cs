@@ -15,6 +15,9 @@ public class Obstacle : MonoBehaviour {
         gameObject.AddComponent<MeshRenderer>().material = (Material)Resources.Load("Obstacle_Material");
         gameObject.AddComponent<Rigidbody2D>().isKinematic = true;
 
+        transform.parent = Editor.level.transform;
+        tag = "Obstacle";
+
     }
 
     public static void CreateObstacle(Vector3[] vertices, bool sharp = false)
