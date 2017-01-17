@@ -23,7 +23,7 @@ public class Shape : MonoBehaviour {
         gameObject.name = id.ToString();
         id++;
 
-        GameObject parent = new GameObject();
+        GameObject parent = new GameObject("" + id);
         parent.tag = "Shape_Handler";
         parent.AddComponent<Shape_Handler> ();
 
@@ -488,12 +488,15 @@ public class Shape : MonoBehaviour {
                 return true;
 
         }
+        Color color = new Color(Random.Range(0, 1f), Random.Range(0, 1f), Random.Range(0, 1f));
 
-        for(int i = 0; i < path1.Length; i++)
+        for (int i = 0; i < path1.Length; i++)
         {
 
             for(int j = 0; j < path2.Length; j++)
             {
+                Debug.DrawLine(path1[i], path1[(i + 1) % path1.Length], color, 100);
+                Debug.DrawLine(path2[j], path2[(j + 1) % path2.Length], color, 100);
 
                 Vector2 intersection;
                 bool intersected = MathF.LineIntersection(path1[i], path1[(i + 1) % path1.Length], path2[j], path2[(j + 1) % path2.Length], out intersection);

@@ -115,7 +115,7 @@ public class Drawer : MonoBehaviour {
         if (Input.GetMouseButtonUp(0))
         {
 
-            if(Input.mousePosition.x < Screen.width - Screen.width/7f)
+            if(Input.mousePosition.x < Screen.width - 200)
             {
 
                 Vector2 mousePos = Camera.main.ScreenToWorldPoint(Input.mousePosition);

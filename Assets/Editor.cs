@@ -72,8 +72,8 @@ public class Editor : MonoBehaviour {
         if (Input.GetKey(KeyCode.LeftShift))
         {
 
-            Camera.main.transform.Translate(Vector3.right * Input.GetAxis("Mouse X"));
-            Camera.main.transform.Translate(Vector3.up * Input.GetAxis("Mouse Y"));
+            Camera.main.transform.Translate(Vector3.right * -Input.GetAxis("Mouse X"));
+            Camera.main.transform.Translate(Vector3.up * -Input.GetAxis("Mouse Y"));
             Camera.main.orthographicSize += Input.GetAxis("Mouse ScrollWheel") * zoom_speed;
 
         }

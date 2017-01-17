@@ -18,7 +18,7 @@ public class Shape_Handler : MonoBehaviour {
 	}
 
     //Used for delaying the merge of newly split shapes.
-    int lifetime = 0;
+    public int lifetime = 0;
     int fadetime = 30;
 
     void Update()
@@ -32,7 +32,7 @@ public class Shape_Handler : MonoBehaviour {
         for(int i = 0; i < transform.childCount; i++)
         {
 
-            transform.GetChild(0).GetComponent<Renderer>().material.color = Color.green * (((float)lifetime * 0.5f) / fadetime) + Color.green * 0.5f;
+            transform.GetChild(i).GetComponent<Renderer>().material.color = Color.green * (((float)lifetime * 0.5f) / fadetime) + Color.green * 0.5f;
 
         }
 
@@ -40,6 +40,8 @@ public class Shape_Handler : MonoBehaviour {
 
     public void Split(Vector2 point3, Vector2 point4)
     {
+
+        lifetime = 0;
 
         List<Shape> all_shapes = new List<Shape>();
         for (int i = 0; i < transform.childCount; i++)
@@ -56,7 +58,7 @@ public class Shape_Handler : MonoBehaviour {
 
         }
 
-        for(int i = 0; i < all_shapes.Count; i++)
+        for (int i = 0; i < all_shapes.Count; i++)
         {
 
             float dx = point4.x - point3.x;
@@ -67,7 +69,8 @@ public class Shape_Handler : MonoBehaviour {
 
                 all_shapes[i].transform.Translate(new Vector2(dy, -dx) * 0.01f);
 
-            } else all_shapes[i].transform.Translate(new Vector2(-dy, dx) * 0.01f);
+            }
+            else all_shapes[i].transform.Translate(new Vector2(-dy, dx) * 0.01f);
 
 
         }
@@ -75,22 +78,22 @@ public class Shape_Handler : MonoBehaviour {
         for (int i = 0; i < all_shapes.Count; i++)
         {
 
-            for (int j = i; j < all_shapes.Count; j++)
+            for (int j = 0; j < all_shapes.Count; j++)
             {
 
-                if (all_shapes[i].transform.parent != all_shapes[j].transform)
+                //if (all_shapes[i].transform.parent != all_shapes[j].transform)
                 {
 
                     if (all_shapes[i].Intersecting(all_shapes[j]))
                     {
 
-                        if (isLeft(point3, point4, all_shapes[i].collider.bounds.center) == isLeft(point3, point4, all_shapes[j].collider.bounds.center))
-                            for (int x = 0; x < all_shapes[j].transform.parent.childCount; x++)
-                            {
+                        //if (isLeft(point3, point4, all_shapes[i].collider.bounds.center) == isLeft(point3, point4, all_shapes[j].collider.bounds.center))
+                        for (int x = 0; x < all_shapes[j].transform.parent.childCount; x++)
+                        {
 
-                                all_shapes[j].transform.parent.GetChild(x).transform.parent = all_shapes[i].transform.parent;
+                            all_shapes[j].transform.parent.GetChild(x).transform.parent = all_shapes[i].transform.parent;
 
-                            }
+                        }
 
                     }
 
@@ -112,11 +115,24 @@ public class Shape_Handler : MonoBehaviour {
 
         //Destroy(new_shape.transform.parent.gameObject);
 
-        new_shape.transform.parent = transform;
+        List<Transform> children = new List<Transform>();
+        for (int i = 0; i < new_shape.transform.parent.childCount; i++)
+        {
+
+            children.Add(new_shape.transform.parent.GetChild(i));
+
+        }
+        for (int i = 0; i < children.Count; i++)
+        {
+
+            children[i].parent = transform;
+
+        }
+
 
     }
 
-     void OnTriggerStay2D(Collider2D stay)
+    void OnTriggerStay2D(Collider2D stay)
     {
 
         if (transform.parent != stay.transform.parent)
