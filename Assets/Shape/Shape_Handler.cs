@@ -12,7 +12,7 @@ public class Shape_Handler : MonoBehaviour {
         id = counter;
         counter++;
 
-        gameObject.AddComponent<Rigidbody2D>();
+        gameObject.AddComponent<Rigidbody2D>().collisionDetectionMode = CollisionDetectionMode2D.Continuous;
         gameObject.layer = 1;
 	
 	}
@@ -81,13 +81,13 @@ public class Shape_Handler : MonoBehaviour {
             for (int j = 0; j < all_shapes.Count; j++)
             {
 
-                //if (all_shapes[i].transform.parent != all_shapes[j].transform)
+                if (all_shapes[i].transform.parent != all_shapes[j].transform)
                 {
 
                     if (all_shapes[i].Intersecting(all_shapes[j]))
                     {
 
-                        //if (isLeft(point3, point4, all_shapes[i].collider.bounds.center) == isLeft(point3, point4, all_shapes[j].collider.bounds.center))
+                        if (isLeft(point3, point4, all_shapes[i].collider.bounds.center) == isLeft(point3, point4, all_shapes[j].collider.bounds.center))
                         for (int x = 0; x < all_shapes[j].transform.parent.childCount; x++)
                         {
 

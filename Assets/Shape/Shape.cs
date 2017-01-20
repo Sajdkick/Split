@@ -495,8 +495,6 @@ public class Shape : MonoBehaviour {
 
             for(int j = 0; j < path2.Length; j++)
             {
-                Debug.DrawLine(path1[i], path1[(i + 1) % path1.Length], color, 100);
-                Debug.DrawLine(path2[j], path2[(j + 1) % path2.Length], color, 100);
 
                 Vector2 intersection;
                 bool intersected = MathF.LineIntersection(path1[i], path1[(i + 1) % path1.Length], path2[j], path2[(j + 1) % path2.Length], out intersection);
