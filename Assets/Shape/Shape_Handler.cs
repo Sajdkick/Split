@@ -36,6 +36,21 @@ public class Shape_Handler : MonoBehaviour {
 
         }
 
+        int precision = 3;
+        Vector3 position = GetComponent<Rigidbody2D>().position;
+        transform.position = (new Vector2(Round(position.x, precision), Round(position.y, precision)));
+
+        float rotation = GetComponent<Rigidbody2D>().rotation;
+        GetComponent<Rigidbody2D>().rotation = Round(rotation, precision);
+
+        print(Round(position.x, 2));
+        
+
+    }
+    public static float Round(float value, int digits)
+    {
+        float mult = Mathf.Pow(10.0f, (float)digits);
+        return Mathf.Round(value * mult) / mult;
     }
 
     public void Split(Vector2 point3, Vector2 point4)
